@@ -115,15 +115,6 @@ class RepoSync(object):
             remote add noip https://noip.visualstudio.com/foo/_git/repo_name
         """
         results = []
-        """
-        for url_noip in no_ip_store:
-            repo_name = self.get_repo_name_from_url(url_noip)
-            no_ip_cmd = self.build_remote_cmd(repo_name, self.no_ip_remote_name, url_noip)
-            url_ip = url_noip.replace(no_ip_url, has_ip_url)
-            ip_cmd = self.build_remote_cmd(repo_name, self.ip_remote_name, url_ip)
-            results.append(no_ip_cmd)
-            results.append(ip_cmd)
-        """
         for noips in no_ip_store:
             repo_name = noips.get("name")
             repo_url = noips.get("web_url")
