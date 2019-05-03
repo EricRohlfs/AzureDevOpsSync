@@ -7,23 +7,17 @@ One way sync of git repositories between two AzureDevOps instances when one is o
 
 Do not check in your config file.  The .gitignore file is set to ignore .cfg files.
 
+Make sure the on prems version of AzureDevOps has https set up. Http will not work with git when passing credentials.
 
-# Getting Started
+## Getting Started
 
-
-## Make default.cfg
+### Make default.cfg
 
 In the code folder, rename the default_cfg.txt file to default.cfg and change the values.
 
-# Syncing code between two VSTS Projects
+## Syncing code between two VSTS Projects
 
-This is a quick addon, really not part of the VSTS Neo4j work, but I had a quick need and using the existing VSTS connection info and classes made life easy.
-
-You need to create the default.cfg file, see the readme.md file
-
-Then run SyncRepos.py
-
-You do not need to install Py2Neo for this to work.
+python SyncRepos.py
 
 ## Initial Flow
 
@@ -44,4 +38,3 @@ A repo on Server2 updates, when the script runs, the repo on Server1 should have
 ### Use Case
 
 When a new repo is created on Server2, Server1 needs to know about it. This will be a manual process see Initial Flow.
-
