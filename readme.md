@@ -1,6 +1,7 @@
-# VSTS to Neo4J 
+# AzrueDevOpsSync
 
-Extracts data from VSTS then saves the data in Neo4j with helpful relationships.
+One way sync of git repositories between two AzureDevOps instances when one is on prems and does not have a public ip address.
+
 
 ## Security
 
@@ -9,97 +10,38 @@ Do not check in your config file.  The .gitignore file is set to ignore .cfg fil
 
 # Getting Started
 
-# Install Neo4J
-
-Download and install Neo4J
-
-Install apoc into Neo4J. (Download and the apoc jar file in the plugins folder of Neo4J. If the plugins folder does not exist, just create it in the root of your database folder eg: logs, plugins, schema)
 
 ## Make default.cfg
 
 In the code folder, rename the default_cfg.txt file to default.cfg and change the values.
 
-## Pip
+# Syncing code between two VSTS Projects
 
-pip install py2neo
+This is a quick addon, really not part of the VSTS Neo4j work, but I had a quick need and using the existing VSTS connection info and classes made life easy.
 
-## Run the Scripts
-```
-  python ProjectsTeamsUsers.py
-  python Repositories.py
-  python PullRequests.py
-  python Comments.py
-  python WorkItems.py
-  python WorkItemLinks.py
-  python PostProcessingCmds.py
-```
-## Few Queries
+You need to create the default.cfg file, see the readme.md file
 
-Note: Must run the post processing commands first to create the CreatedTimestamp fields.
+Then run SyncRepos.py
 
-Note: 1514764800000 is Jan 1st 2018
+You do not need to install Py2Neo for this to work.
 
+## Initial Flow
 
-Total Count of Pull Requests Created this year
-```
-  MATCH (n:PullRequest)
-  WHERE n.CreatedTimestamp > 1514764800000
-  RETURN count(n)
-```
+User logs onto AzureDevOps on Server1, does a repo import. Now Server1 will be the primary data source for what repos are updated.
 
-Total Count of Pull Requests by Project since 2018
-```
-  MATCH (n:PullRequest)-[r1]-(repo:Repository)-[r2]-(p:Project{Name:'Oystertoad'})
-  WHERE n.CreatedTimestamp > 1514764800000
-  RETURN count(n)
-```
+The SyncRepos.py, runs on Server1 on a daily schedule and does it's thing.
 
-List of developers accociated with a pull request since 2018 (by project)
-```
-  MATCH (d:Person)-[r3]-(n:PullRequest)-[r1]-(repo:Repository)-[r2]-(p:Project{Name:'Oystertoad'})
-  WHERE n.CreatedTimestamp > 1514764800000
-  RETURN distinct d.Name
-```
+(Note: since 
 
-List of developers who created a pull request since 2018 (by project)
-```
-  MATCH (d:Person)-[r3:CREATED_BY]-(n:PullRequest)-[r1]-(repo:Repository)-[r2]-(p:Project{Name:'Oystertoad'})
-  WHERE n.CreatedTimestamp > 1514764800000
-  RETURN distinct d.Name
-```
+## Use case
 
-List of developers who created a pull request since 2018 (all projects)
-```
-  Match (dev:Developer)
-  Optional Match(dev)-[:CREATED_BY]-(pr:PullRequest)-[]-(r:Repository)-[]-(t:Project)
-  WHERE pr.CreatedTimestamp > 1514764800000
-  RETURN count(pr) as pullRequestsCreated, dev.Name, t.Name as ProjectName
-  order by dev.Name, pullRequestsCreated
-```
+In a world, where a team has two on prems versions of AzureDevOps, behind firewalls and only Server2 public IP Addresses ...
 
-List of developers who reviewed pull requests since 2018 (by project)
-```
-  MATCH (d:Person)-[r3:REVIEWED_BY]-(n:PullRequest)-[r1]-(repo:Repository)-[r2]-(p:Project{Name:'Oystertoad'})
-  WHERE n.CreatedTimestamp > 1514764800000
-  RETURN distinct d.Name
-```
+### Use Case
 
-Count of Comments by User for the past 365 days
+A repo on Server2 updates, when the script runs, the repo on Server1 should have all the updates.
 
-```
-  WITH apoc.date.add(timestamp(),"ms", -365, 'd') as PastDate
-  Match (u:Person)
-  Optional Match (u)-[:AUTHOR]-(c:Comment)
-  WHERE c.PublishedTimestamp >= PastDate
-  RETURN count(c) as numberOfComments, u.Name as CodeReviewer
-  ORDER BY numberOfComments
-```
+### Use Case
 
-Dump all comments made over the past year
-```
-  WITH apoc.date.add(timestamp(),"ms", -365, 'd') as PastDate
-  Match (u:Developer)
-  Optional Match (u)-[:AUTHOR]-(c:Comment)
-  WHERE c.PublishedTimestamp >= PastDate
-  RETURN u.Name as CodeReviewer, c.Id, c.Content, c.PublishedTimestamp as PTimestamp
-```
+When a new repo is created on Server2, Server1 needs to know about it. This will be a manual process see Initial Flow.
+
