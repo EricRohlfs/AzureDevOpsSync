@@ -9,6 +9,12 @@ Do not check in your config file.  The .gitignore file is set to ignore .cfg fil
 
 Make sure the on prems version of AzureDevOps has https set up. Http will not work with git when passing credentials.
 
+## Current Desing Strategy
+
+Since cloning could take quite a while, the current plan is to have this script generate the various scripts.
+They can then be executed manually or by being called form another 'master' script.
+
+
 ## Getting Started
 
 ### Make default.cfg
@@ -17,7 +23,15 @@ In the code folder, rename the default_cfg.txt file to default.cfg and change th
 
 ## Syncing code between two VSTS Projects
 
-python SyncRepos.py
+Run the SyncRepos.py script
+
+    python SyncRepos.py
+
+The look in the folder that was set for the GitRootFolderPath in the default.cfg file.
+
+    git_clone_missing.bat
+    git_set_remotes.bat
+    git_fetch_push.bat
 
 ## Initial Flow
 

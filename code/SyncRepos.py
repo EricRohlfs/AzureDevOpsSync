@@ -25,7 +25,7 @@ class RepoSync(object):
         """
         return "ip_remote"
 
-    def add_repo_urls_to_store(self, project_info, store):
+    def set_repo_store(self, project_info, store):
         """
         Gets the url for a git clone
         """
@@ -107,7 +107,9 @@ class RepoSync(object):
 
     def get_missing_local_repos(self, local_folders, repos):
         """
-        Compares the list of repo names to local folders and returns the difference
+        Compares the list of repo names in AzureDevOps to local git folders and returns the difference or missing ones
+        :param array local_folders: The list of folders on the computer this script is run from
+        :param array repos: List of git repositories from AzureDevOps api call
         """
         repo_names = []
         for repo in repos:
@@ -161,15 +163,16 @@ if __name__ == '__main__':
     CONFIG = configparser.ConfigParser()
     CONFIG.read_file(open('default.cfg'))
 
-    #set to false for easier debugging, but it is slower
-    RUN_MULTITHREADED = CONFIG['RepoSync']['RunMultiThreaded']
-    RUN_MULTITHREADED = RUN_MULTITHREADED in ['True', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']
-    SERVER_NO_IP = CONFIG['RepoSync']['ServerNoIp']
+    IS_TRUE = ['True', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']
+
+    RUN_MULTITHREADED = CONFIG['RepoSync']['RunMultiThreaded'] in IS_TRUE
+    SERVER_NO_IP = CONFIG['RepoSync']['ServerNoIp'] 
     SERVER_IP = CONFIG['RepoSync']['ServerIp']
     GIT_ROOT_FOLDER_PATH = CONFIG['RepoSync']['GitRootFolderPath']
+    IGNORE_VSTS_CACHE = CONFIG['RepoSync']["IgnoreVstsCache"] in IS_TRUE
 
     #for this script we always want to ignore the cache
-    VSTS = VstsInfo(None, None, ignore_cache=True)
+    VSTS = VstsInfo(None, None, ignore_cache= IGNORE_VSTS_CACHE )
 
     PTU_WORKER = ProjectsTeamsUsersWorker(VSTS.get_request_settings(), VSTS.project_whitelist, VSTS)
     PROJECTS_URL = PTU_WORKER.get_vsts_projects_url()
@@ -185,15 +188,13 @@ if __name__ == '__main__':
 
     if RUN_MULTITHREADED:
         with Pool(5) as p:
-            p.map(REPO_SYNC.add_repo_urls_to_store, PROJECTS, REPO_NOIP_STORE)
+            p.map(REPO_SYNC.set_repo_store, PROJECTS, REPO_NOIP_STORE)
     else:
         for PROJ in PROJECTS:
-            REPO_SYNC.add_repo_urls_to_store(PROJ, REPO_NOIP_STORE)
+            REPO_SYNC.set_repo_store(PROJ, REPO_NOIP_STORE)
 
-    
     #generate bat file to clome missing repos
     LOCAL_MISSING = REPO_SYNC.get_missing_local_repos(LOCAL_REPOS, REPO_NOIP_STORE)
-
     CLONE_MISSING = REPO_SYNC.make_clone_script(REPO_NOIP_STORE,
                                                 LOCAL_MISSING, GIT_ROOT_FOLDER_PATH)
     for c in LOCAL_MISSING:
