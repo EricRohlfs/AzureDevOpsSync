@@ -38,14 +38,6 @@ class RepoSync(object):
             repo_info["id"] = repo.get("id")
             store.append(repo_info)
 
-    def save_repo_urls(self, urls, filename):
-        """
-        saves the urls to a file
-        """
-        with open(filename, 'w') as file:
-            for item in urls:
-                file.write("%s\n" % item)
-
     def save_cmd_list(self, cmds, filename):
         """
         saves a list to a file
@@ -64,7 +56,7 @@ class RepoSync(object):
             changed.append(url.replace(old_fqdn, new_fqdn))
         return changed
 
-    def make_clone_script(self, repo_list, missing, git_folder_root):
+    def make_clone_script(self, repo_list, git_folder_root):
         """
         Makes a clone script to run in a batch file
         """
@@ -72,18 +64,9 @@ class RepoSync(object):
         for repo in repo_list:
             repo_name = repo.get("name")
             url = repo.get("web_url")
-            id = repo.get("id")
-            print("web url" + url)
-            for missed in missing:
-                missed_id = ""
-                for item in repo_list:
-                    if item["name"] == missed:
-                        missed_id = item["id"]
-                if missed_id in url:
-                    #where_to_clone = "{0}{1}\\".format(git_folder_root, repo_name)
-                    where_to_clone = os.path.join(git_folder_root, repo_name)
-                    cmd = 'git clone {0} \"{1}\"'.format(url, where_to_clone)
-                    clone.append(cmd)
+            where_to_clone = os.path.join(git_folder_root, repo_name)
+            cmd = 'git clone {0} \"{1}\"'.format(url, where_to_clone)
+            clone.append(cmd)
         return clone
 
     def get_local_git_repos(self, git_root):
@@ -104,20 +87,20 @@ class RepoSync(object):
         name = url[idx:full]
         return name
 
-
     def get_missing_local_repos(self, local_folders, repos):
         """
         Compares the list of repo names in AzureDevOps to local git folders and returns the difference or missing ones
         :param array local_folders: The list of folders on the computer this script is run from
         :param array repos: List of git repositories from AzureDevOps api call
+        :return: array of missing repository information
         """
-        repo_names = []
+        missing_repos = []
         for repo in repos:
             repo_name = repo.get("name")
-            repo_names.append(repo_name)
+            if repo_name not in local_folders:
+                missing_repos.append(repo)
 
-        missing = set(repo_names).difference(local_folders)
-        return missing
+        return missing_repos
 
     def build_remote_cmd(self, repo_name, remote_name, remote_url):
         """
@@ -132,12 +115,23 @@ class RepoSync(object):
             remote add noip https://noip.visualstudio.com/foo/_git/repo_name
         """
         results = []
+        """
         for url_noip in no_ip_store:
             repo_name = self.get_repo_name_from_url(url_noip)
             no_ip_cmd = self.build_remote_cmd(repo_name, self.no_ip_remote_name, url_noip)
             url_ip = url_noip.replace(no_ip_url, has_ip_url)
             ip_cmd = self.build_remote_cmd(repo_name, self.ip_remote_name, url_ip)
             results.append(no_ip_cmd)
+            results.append(ip_cmd)
+        """
+        for noips in no_ip_store:
+            repo_name = noips.get("name")
+            repo_url = noips.get("web_url")
+            no_ip_cmd = self.build_remote_cmd(repo_name, self.no_ip_remote_name(), repo_url)
+            results.append(no_ip_cmd)
+            
+            url_ip = repo_url.replace(no_ip_url, has_ip_url)
+            ip_cmd = self.build_remote_cmd(repo_name, self.ip_remote_name(), url_ip)
             results.append(ip_cmd)
         return results
 
@@ -172,7 +166,7 @@ if __name__ == '__main__':
     IGNORE_VSTS_CACHE = CONFIG['RepoSync']["IgnoreVstsCache"] in IS_TRUE
 
     #for this script we always want to ignore the cache
-    VSTS = VstsInfo(None, None, ignore_cache= IGNORE_VSTS_CACHE )
+    VSTS = VstsInfo(None, None, ignore_cache=IGNORE_VSTS_CACHE )
 
     PTU_WORKER = ProjectsTeamsUsersWorker(VSTS.get_request_settings(), VSTS.project_whitelist, VSTS)
     PROJECTS_URL = PTU_WORKER.get_vsts_projects_url()
@@ -196,10 +190,8 @@ if __name__ == '__main__':
     #generate bat file to clome missing repos
     LOCAL_MISSING = REPO_SYNC.get_missing_local_repos(LOCAL_REPOS, REPO_NOIP_STORE)
     CLONE_MISSING = REPO_SYNC.make_clone_script(REPO_NOIP_STORE,
-                                                LOCAL_MISSING, GIT_ROOT_FOLDER_PATH)
-    for c in LOCAL_MISSING:
-        print(c)
-    REPO_SYNC.save_repo_urls(CLONE_MISSING,
+                                                GIT_ROOT_FOLDER_PATH)
+    REPO_SYNC.save_cmd_list(CLONE_MISSING,
                              GIT_ROOT_FOLDER_PATH + "\\git_clone_missing.bat")
 
     #set both remotes
@@ -210,10 +202,12 @@ if __name__ == '__main__':
     #fetch from SERVER_IP AND PUSH TO NO_IP, including tags
     #may need tweaking if no_ip_server updates any code
     FETCH_PUSH_CMDS = []
-    for REPO_URL in REPO_NOIP_STORE:
-        REPO_NAME = REPO_SYNC.get_repo_name_from_url(REPO_URL)
+    for REPO_INFO in REPO_NOIP_STORE:
+        REPO_NAME = REPO_INFO.get("name")
+
         fetch_has_ip = REPO_SYNC.get_fetch_cmd(REPO_NAME, REPO_SYNC.ip_remote_name())
         FETCH_PUSH_CMDS.append(fetch_has_ip)
+
         push_no_ip = REPO_SYNC.get_push_cmd(REPO_NAME, REPO_SYNC.no_ip_remote_name())
         FETCH_PUSH_CMDS.append(push_no_ip)
 
