@@ -16,4 +16,7 @@ ServerNoIp = https://noip.visualstudio.com
 ServerIp = https://haspublicip.visualstudio.com
 
 RunMultiThreaded = False
-GitRootFolderPath = c:\GitSyncRoot\
+GitRootFolderPath = D:\GitSyncRoot\
+SaveScriptsFolderPath = c:\users\eric\documents\git_sync_scripts
+# IgnoreVstsCache when true caches https requests, helpful for debugging and development
+IgnoreVstsCache = False
