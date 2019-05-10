@@ -36,6 +36,7 @@ class RepoSync(object):
             repo_info["web_url"] = repo.get("url")
             repo_info["name"] = repo.get("name")
             repo_info["id"] = repo.get("id")
+            repo_info["remoteUrl"] = repo.get("remoteUrl")
             store.append(repo_info)
 
     def save_cmd_list(self, cmds, filename):
