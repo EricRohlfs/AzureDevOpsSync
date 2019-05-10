@@ -63,7 +63,7 @@ class RepoSync(object):
         clone = []
         for repo in repo_list:
             repo_name = repo.get("name")
-            url = repo.get("web_url")
+            url = repo.get("remoteUrl")
             where_to_clone = os.path.join(git_folder_root, repo_name)
             cmd = 'git clone {0} \"{1}\"'.format(url, where_to_clone)
             clone.append(cmd)
